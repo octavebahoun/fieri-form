@@ -1,0 +1,124 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isStringMax(value, max) {
+      return value is string && value.size() <= max;
+    }
+
+    function ratingOk(value) {
+      return value in ['indispensable', 'utile', 'pas_besoin'];
+    }
+
+    function roleOk(value) {
+      return value in ['membre', 'bureau', 'responsable', 'enseignant', 'autre'];
+    }
+
+    function validRatings() {
+      let ratings = request.resource.data.functionRatings;
+      return ratings is map
+        && ratings.keys().hasOnly([
+          'annonces', 'calendrier', 'ateliers', 'adhesion', 'presences',
+          'cotisations', 'projets', 'galerie', 'documents', 'messagerie', 'autre'
+        ])
+        && (
+          !('annonces' in ratings) || ratingOk(ratings.annonces)
+        )
+        && (
+          !('calendrier' in ratings) || ratingOk(ratings.calendrier)
+        )
+        && (
+          !('ateliers' in ratings) || ratingOk(ratings.ateliers)
+        )
+        && (
+          !('adhesion' in ratings) || ratingOk(ratings.adhesion)
+        )
+        && (
+          !('presences' in ratings) || ratingOk(ratings.presences)
+        )
+        && (
+          !('cotisations' in ratings) || ratingOk(ratings.cotisations)
+        )
+        && (
+          !('projets' in ratings) || ratingOk(ratings.projets)
+        )
+        && (
+          !('galerie' in ratings) || ratingOk(ratings.galerie)
+        )
+        && (
+          !('documents' in ratings) || ratingOk(ratings.documents)
+        )
+        && (
+          !('messagerie' in ratings) || ratingOk(ratings.messagerie)
+        )
+        && (
+          !('autre' in ratings) || ratingOk(ratings.autre)
+        );
+    }
+
+    function validTop3() {
+      let top3 = request.resource.data.top3;
+      return top3 is list
+        && top3.size() <= 3
+        && top3.hasOnly([
+          'annonces', 'calendrier', 'ateliers', 'adhesion', 'presences',
+          'cotisations', 'projets', 'galerie', 'documents', 'messagerie', 'autre'
+        ]);
+    }
+
+    function validResponse() {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'prenom', 'role', 'roleAutre', 'filiere', 'annee', 'frequence',
+          'orgTools', 'orgAutre', 'bloque', 'functionRatings', 'functionAutre',
+          'top3', 'permissions', 'minRoles', 'validator', 'palette',
+          'paletteCustom', 'ambiance', 'modePref', 'uxNeeds', 'agace',
+          'appliAimee', 'device', 'connexion', 'troisChoses', 'contactPrenom',
+          'contactWhatsapp', 'schemaVersion', 'createdAt'
+        ])
+        && d.schemaVersion is int
+        && d.schemaVersion == 1
+        && d.createdAt == request.time
+        && roleOk(d.role)
+        && isStringMax(d.prenom, 80)
+        && isStringMax(d.roleAutre, 80)
+        && isStringMax(d.filiere, 80)
+        && isStringMax(d.annee, 80)
+        && d.frequence in ['chaque_semaine', 'quelques_fois_mois', 'rarement', 'pas_encore']
+        && d.orgTools is list
+        && d.orgTools.size() <= 8
+        && isStringMax(d.orgAutre, 80)
+        && isStringMax(d.bloque, 500)
+        && validRatings()
+        && isStringMax(d.functionAutre, 500)
+        && validTop3()
+        && d.permissions is map
+        && d.minRoles is list
+        && d.minRoles.size() <= 5
+        && d.validator in ['president', 'bureau', 'responsable_designe', 'libre', 'ne_sais_pas', '']
+        && d.palette in ['fieri', 'clair', 'vives', 'sombre', 'vert', 'autre']
+        && isStringMax(d.paletteCustom, 20)
+        && d.ambiance in ['serieuse', 'moderne', 'minimaliste', 'fun']
+        && d.modePref in ['clair', 'sombre', 'les_deux']
+        && d.uxNeeds is list
+        && d.uxNeeds.size() <= 10
+        && isStringMax(d.agace, 500)
+        && isStringMax(d.appliAimee, 500)
+        && d.device in ['android', 'iphone', 'ordinateur']
+        && d.connexion in ['bonne', 'moyenne', 'faible']
+        && isStringMax(d.troisChoses, 500)
+        && isStringMax(d.contactPrenom, 80)
+        && isStringMax(d.contactWhatsapp, 80);
+    }
+
+    match /reponses/{docId} {
+      // Écritures prévues via /api/submit (Admin SDK, contourne les règles).
+      // create client autorisé uniquement avec validation stricte (défense en profondeur).
+      allow create: if validResponse();
+      allow read, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

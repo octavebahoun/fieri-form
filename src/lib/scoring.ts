@@ -240,9 +240,15 @@ export function computeStats(responses: StoredResponse[]): DashboardStats {
 }
 
 export function responsesToCsv(responses: StoredResponse[]): string {
+  const ratingHeaders = FUNCTIONS.map((fn) => `rating_${fn.id}`);
+  const permissionHeaders = PERMISSION_ACTIONS.map(
+    (action) => `perm_${action.id}`,
+  );
+
   const headers = [
     "id",
     "createdAt",
+    "schemaVersion",
     "prenom",
     "role",
     "roleAutre",
@@ -250,8 +256,12 @@ export function responsesToCsv(responses: StoredResponse[]): string {
     "annee",
     "frequence",
     "orgTools",
+    "orgAutre",
     "bloque",
+    ...ratingHeaders,
+    "functionAutre",
     "top3",
+    ...permissionHeaders,
     "minRoles",
     "validator",
     "palette",
@@ -276,10 +286,18 @@ export function responsesToCsv(responses: StoredResponse[]): string {
 
   const lines = [headers.join(",")];
   for (const r of responses) {
+    const ratingCells = FUNCTIONS.map(
+      (fn) => r.functionRatings?.[fn.id] ?? "",
+    );
+    const permissionCells = PERMISSION_ACTIONS.map((action) =>
+      (r.permissions?.[action.id] ?? []).join("|"),
+    );
+
     lines.push(
       [
         r.id ?? "",
         r.createdAt ?? "",
+        r.schemaVersion ?? "",
         r.prenom,
         r.role,
         r.roleAutre,
@@ -287,8 +305,12 @@ export function responsesToCsv(responses: StoredResponse[]): string {
         r.annee,
         r.frequence,
         r.orgTools.join("|"),
+        r.orgAutre,
         r.bloque,
+        ...ratingCells,
+        r.functionAutre,
         r.top3.join("|"),
+        ...permissionCells,
         r.minRoles.join("|"),
         r.validator,
         r.palette,
@@ -308,5 +330,7 @@ export function responsesToCsv(responses: StoredResponse[]): string {
         .join(","),
     );
   }
-  return lines.join("\n");
+
+  // BOM UTF-8 pour Excel (FR) ; séparateur virgule conservé
+  return `\uFEFF${lines.join("\n")}`;
 }

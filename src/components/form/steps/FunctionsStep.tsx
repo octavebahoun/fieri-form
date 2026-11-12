@@ -1,6 +1,6 @@
 "use client";
 
-import { Field, TextArea, StepTitle } from "@/components/ui";
+import { ErrorText, Field, TextArea, StepTitle } from "@/components/ui";
 import { FUNCTIONS, MAX_TEXT } from "@/lib/constants";
 import type { FormAnswers, FunctionId, FunctionRating } from "@/lib/types";
 
@@ -13,9 +13,11 @@ const RATINGS: { id: FunctionRating; label: string }[] = [
 export function FunctionsStep({
   answers,
   onChange,
+  fieldErrors = {},
 }: {
   answers: FormAnswers;
   onChange: (partial: Partial<FormAnswers>) => void;
+  fieldErrors?: Record<string, string>;
 }) {
   function setRating(id: FunctionId, rating: FunctionRating) {
     onChange({
@@ -29,6 +31,10 @@ export function FunctionsStep({
         title="De quoi as-tu vraiment besoin ?"
         subtitle="Pour chaque idée : Indispensable, Utile ou Pas besoin."
       />
+
+      {fieldErrors.functionRatings ? (
+        <ErrorText>{fieldErrors.functionRatings}</ErrorText>
+      ) : null}
 
       <div className="space-y-4">
         {FUNCTIONS.map((fn) => {

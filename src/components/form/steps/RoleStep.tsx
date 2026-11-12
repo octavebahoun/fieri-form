@@ -1,15 +1,17 @@
 "use client";
 
-import { Choice, Field, TextInput, StepTitle } from "@/components/ui";
+import { Choice, ErrorText, Field, TextInput, StepTitle } from "@/components/ui";
 import { FREQUENCIES, MAX_SHORT, ROLES } from "@/lib/constants";
 import type { FormAnswers } from "@/lib/types";
 
 export function RoleStep({
   answers,
   onChange,
+  fieldErrors = {},
 }: {
   answers: FormAnswers;
   onChange: (partial: Partial<FormAnswers>) => void;
+  fieldErrors?: Record<string, string>;
 }) {
   return (
     <div className="space-y-5">
@@ -41,6 +43,7 @@ export function RoleStep({
             </Choice>
           ))}
         </div>
+        {fieldErrors.role ? <ErrorText>{fieldErrors.role}</ErrorText> : null}
         {answers.role === "autre" ? (
           <TextInput
             maxLength={MAX_SHORT}
@@ -88,6 +91,9 @@ export function RoleStep({
             </Choice>
           ))}
         </div>
+        {fieldErrors.frequence ? (
+          <ErrorText>{fieldErrors.frequence}</ErrorText>
+        ) : null}
       </div>
     </div>
   );

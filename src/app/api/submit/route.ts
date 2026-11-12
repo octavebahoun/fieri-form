@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { withNoStore } from "@/lib/http";
 import { saveResponse } from "@/lib/responses";
 import { sanitizeAnswers, validateForSubmit } from "@/lib/validation";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -11,7 +13,7 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json(
       { ok: false, error: "Requête invalide." },
-      { status: 400 },
+      { status: 400, headers: withNoStore() },
     );
   }
 
@@ -19,7 +21,7 @@ export async function POST(request: Request) {
   if (!answers) {
     return NextResponse.json(
       { ok: false, error: "Données invalides." },
-      { status: 400 },
+      { status: 400, headers: withNoStore() },
     );
   }
 
@@ -27,7 +29,7 @@ export async function POST(request: Request) {
   if (errors.length > 0) {
     return NextResponse.json(
       { ok: false, error: errors[0]!.message },
-      { status: 400 },
+      { status: 400, headers: withNoStore() },
     );
   }
 
@@ -40,9 +42,12 @@ export async function POST(request: Request) {
           "Enregistrement impossible pour le moment. Vérifie FIREBASE_SERVICE_ACCOUNT côté serveur.",
         detail: result.reason,
       },
-      { status: 503 },
+      { status: 503, headers: withNoStore() },
     );
   }
 
-  return NextResponse.json({ ok: true, id: result.id });
+  return NextResponse.json(
+    { ok: true, id: result.id },
+    { headers: withNoStore() },
+  );
 }

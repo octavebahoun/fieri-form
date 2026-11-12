@@ -1,6 +1,6 @@
 "use client";
 
-import { Choice, Field, TextArea, StepTitle } from "@/components/ui";
+import { Choice, ErrorText, Field, TextArea, StepTitle } from "@/components/ui";
 import {
   AMBIANCES,
   MAX_TEXT,
@@ -13,9 +13,11 @@ import type { FormAnswers, UxNeedId } from "@/lib/types";
 export function DesignStep({
   answers,
   onChange,
+  fieldErrors = {},
 }: {
   answers: FormAnswers;
   onChange: (partial: Partial<FormAnswers>) => void;
+  fieldErrors?: Record<string, string>;
 }) {
   function toggleUx(id: UxNeedId) {
     const has = answers.uxNeeds.includes(id);
@@ -79,6 +81,7 @@ export function DesignStep({
             />
           </Field>
         ) : null}
+        {fieldErrors.palette ? <ErrorText>{fieldErrors.palette}</ErrorText> : null}
       </div>
 
       <div className="space-y-2">
@@ -92,6 +95,9 @@ export function DesignStep({
             {item.label}
           </Choice>
         ))}
+        {fieldErrors.ambiance ? (
+          <ErrorText>{fieldErrors.ambiance}</ErrorText>
+        ) : null}
       </div>
 
       <div className="space-y-2">
@@ -105,6 +111,9 @@ export function DesignStep({
             {item.label}
           </Choice>
         ))}
+        {fieldErrors.modePref ? (
+          <ErrorText>{fieldErrors.modePref}</ErrorText>
+        ) : null}
       </div>
 
       <div className="space-y-2">

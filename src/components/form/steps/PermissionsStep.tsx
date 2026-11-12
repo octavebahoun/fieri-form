@@ -1,6 +1,6 @@
 "use client";
 
-import { Chip, Choice, StepTitle } from "@/components/ui";
+import { Chip, Choice, ErrorText, StepTitle } from "@/components/ui";
 import {
   APP_ROLES,
   MIN_ROLES,
@@ -13,9 +13,11 @@ import { needsDetailedPermissions } from "@/lib/validation";
 export function PermissionsStep({
   answers,
   onChange,
+  fieldErrors = {},
 }: {
   answers: FormAnswers;
   onChange: (partial: Partial<FormAnswers>) => void;
+  fieldErrors?: Record<string, string>;
 }) {
   const detailed = needsDetailedPermissions(answers.role);
 
@@ -94,6 +96,9 @@ export function PermissionsStep({
             {role.label}
           </Choice>
         ))}
+        {fieldErrors.minRoles ? (
+          <ErrorText>{fieldErrors.minRoles}</ErrorText>
+        ) : null}
       </div>
 
       <div className="space-y-2">

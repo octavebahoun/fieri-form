@@ -4,8 +4,10 @@ import {
   createAdminToken,
   isAdminConfigured,
 } from "@/lib/admin-auth";
+import { withNoStore } from "@/lib/http";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   if (!isAdminConfigured()) {
@@ -15,7 +17,7 @@ export async function POST(request: Request) {
         error:
           "ADMIN_PASSCODE n'est pas configuré sur le serveur. Ajoute-le dans les variables d'environnement Vercel.",
       },
-      { status: 503 },
+      { status: 503, headers: withNoStore() },
     );
   }
 
@@ -26,7 +28,7 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json(
       { ok: false, error: "Requête invalide." },
-      { status: 400 },
+      { status: 400, headers: withNoStore() },
     );
   }
 
@@ -34,11 +36,14 @@ export async function POST(request: Request) {
   if (!token) {
     return NextResponse.json(
       { ok: false, error: "Code incorrect." },
-      { status: 401 },
+      { status: 401, headers: withNoStore() },
     );
   }
 
-  const response = NextResponse.json({ ok: true });
+  const response = NextResponse.json(
+    { ok: true },
+    { headers: withNoStore() },
+  );
   response.cookies.set(ADMIN_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",

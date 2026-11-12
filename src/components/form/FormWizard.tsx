@@ -6,7 +6,13 @@ import { ShareQr } from "@/components/ShareQr";
 import { Button, Card, ErrorText } from "@/components/ui";
 import { clearDraft, loadDraft, loadDraftStep, saveDraft } from "@/lib/draft";
 import { EMPTY_ANSWERS, type FormAnswers } from "@/lib/types";
-import { validateForSubmit } from "@/lib/validation";
+import {
+  eligibleForTop3,
+  fieldErrorsMap,
+  validateForSubmit,
+  validateStep,
+  type FormStepId,
+} from "@/lib/validation";
 import { RoleStep } from "./steps/RoleStep";
 import { OrgStep } from "./steps/OrgStep";
 import { FunctionsStep } from "./steps/FunctionsStep";
@@ -18,7 +24,7 @@ import { RecapStep } from "./steps/RecapStep";
 import { WelcomeStep } from "./steps/WelcomeStep";
 import { ThanksStep } from "./steps/ThanksStep";
 
-const STEP_IDS = [
+const STEP_IDS: FormStepId[] = [
   "welcome",
   "role",
   "org",
@@ -28,9 +34,7 @@ const STEP_IDS = [
   "design",
   "usage",
   "recap",
-] as const;
-
-type StepId = (typeof STEP_IDS)[number];
+];
 
 export function FormWizard() {
   const [ready, setReady] = useState(false);
@@ -38,6 +42,7 @@ export function FormWizard() {
   const [answers, setAnswers] = useState<FormAnswers>(EMPTY_ANSWERS);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -59,18 +64,50 @@ export function FormWizard() {
     [step],
   );
 
+  function clearErrors() {
+    setError("");
+    setFieldErrors({});
+  }
+
+  function clearFieldError(...fields: string[]) {
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      for (const field of fields) delete next[field];
+      return next;
+    });
+  }
+
   function patch(partial: Partial<FormAnswers>) {
-    setAnswers((prev) => ({ ...prev, ...partial }));
+    setAnswers((prev) => {
+      const nextAnswers = { ...prev, ...partial };
+      if (partial.functionRatings) {
+        const eligible = new Set(eligibleForTop3(nextAnswers.functionRatings));
+        nextAnswers.top3 = nextAnswers.top3.filter((id) => eligible.has(id));
+      }
+      return nextAnswers;
+    });
+    if (partial.frequence !== undefined) clearFieldError("frequence");
+    if (partial.role !== undefined) clearFieldError("role");
+    if (partial.functionRatings !== undefined) clearFieldError("functionRatings");
+    if (partial.top3 !== undefined) clearFieldError("top3");
+    if (partial.minRoles !== undefined) clearFieldError("minRoles");
   }
 
   function next() {
-    setError("");
+    const current = STEP_IDS[step]!;
+    const errors = validateStep(current, answers);
+    if (errors.length > 0) {
+      setError(errors[0]!.message);
+      setFieldErrors(fieldErrorsMap(errors));
+      return;
+    }
+    clearErrors();
     setStep((s) => Math.min(s + 1, STEP_IDS.length - 1));
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function back() {
-    setError("");
+    clearErrors();
     setStep((s) => Math.max(s - 1, 0));
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -79,6 +116,7 @@ export function FormWizard() {
     const errors = validateForSubmit(answers);
     if (errors.length) {
       setError(errors[0]!.message);
+      setFieldErrors(fieldErrorsMap(errors));
       return;
     }
 
@@ -121,7 +159,7 @@ export function FormWizard() {
     );
   }
 
-  const current: StepId = STEP_IDS[step]!;
+  const current: FormStepId = STEP_IDS[step]!;
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-lg px-4 py-6 pb-28">
@@ -142,23 +180,52 @@ export function FormWizard() {
 
       <Card>
         {current === "welcome" && <WelcomeStep onStart={next} />}
-        {current === "role" && <RoleStep answers={answers} onChange={patch} />}
+        {current === "role" && (
+          <RoleStep
+            answers={answers}
+            onChange={patch}
+            fieldErrors={fieldErrors}
+          />
+        )}
         {current === "org" && <OrgStep answers={answers} onChange={patch} />}
         {current === "functions" && (
-          <FunctionsStep answers={answers} onChange={patch} />
+          <FunctionsStep
+            answers={answers}
+            onChange={patch}
+            fieldErrors={fieldErrors}
+          />
         )}
-        {current === "top3" && <Top3Step answers={answers} onChange={patch} />}
+        {current === "top3" && (
+          <Top3Step
+            answers={answers}
+            onChange={patch}
+            fieldErrors={fieldErrors}
+          />
+        )}
         {current === "permissions" && (
-          <PermissionsStep answers={answers} onChange={patch} />
+          <PermissionsStep
+            answers={answers}
+            onChange={patch}
+            fieldErrors={fieldErrors}
+          />
         )}
         {current === "design" && (
-          <DesignStep answers={answers} onChange={patch} />
+          <DesignStep
+            answers={answers}
+            onChange={patch}
+            fieldErrors={fieldErrors}
+          />
         )}
-        {current === "usage" && <UsageStep answers={answers} onChange={patch} />}
+        {current === "usage" && (
+          <UsageStep
+            answers={answers}
+            onChange={patch}
+            fieldErrors={fieldErrors}
+          />
+        )}
         {current === "recap" && <RecapStep answers={answers} />}
       </Card>
 
-      {/* Honeypot */}
       <div className="honeypot" aria-hidden>
         <label>
           Site web
@@ -171,7 +238,11 @@ export function FormWizard() {
         </label>
       </div>
 
-      {error ? (
+      {error &&
+      !(
+        (current === "role" && fieldErrors.frequence) ||
+        (current === "functions" && fieldErrors.functionRatings)
+      ) ? (
         <div className="mt-3">
           <ErrorText>{error}</ErrorText>
         </div>

@@ -1,15 +1,24 @@
 "use client";
 
-import { Choice, Field, TextArea, TextInput, StepTitle } from "@/components/ui";
+import {
+  Choice,
+  ErrorText,
+  Field,
+  TextArea,
+  TextInput,
+  StepTitle,
+} from "@/components/ui";
 import { CONNECTIONS, DEVICES, MAX_SHORT, MAX_TEXT } from "@/lib/constants";
 import type { FormAnswers } from "@/lib/types";
 
 export function UsageStep({
   answers,
   onChange,
+  fieldErrors = {},
 }: {
   answers: FormAnswers;
   onChange: (partial: Partial<FormAnswers>) => void;
+  fieldErrors?: Record<string, string>;
 }) {
   return (
     <div className="space-y-5">
@@ -29,6 +38,7 @@ export function UsageStep({
             {item.label}
           </Choice>
         ))}
+        {fieldErrors.device ? <ErrorText>{fieldErrors.device}</ErrorText> : null}
       </div>
 
       <div className="space-y-2">
@@ -42,6 +52,9 @@ export function UsageStep({
             {item.label}
           </Choice>
         ))}
+        {fieldErrors.connexion ? (
+          <ErrorText>{fieldErrors.connexion}</ErrorText>
+        ) : null}
       </div>
 
       <Field

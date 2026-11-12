@@ -1,6 +1,6 @@
 "use client";
 
-import { StepTitle } from "@/components/ui";
+import { ErrorText, StepTitle } from "@/components/ui";
 import { FUNCTIONS } from "@/lib/constants";
 import type { FormAnswers, FunctionId } from "@/lib/types";
 import { eligibleForTop3 } from "@/lib/validation";
@@ -8,9 +8,11 @@ import { eligibleForTop3 } from "@/lib/validation";
 export function Top3Step({
   answers,
   onChange,
+  fieldErrors = {},
 }: {
   answers: FormAnswers;
   onChange: (partial: Partial<FormAnswers>) => void;
+  fieldErrors?: Record<string, string>;
 }) {
   const eligible = eligibleForTop3(answers.functionRatings);
   const labels = new Map(FUNCTIONS.map((f) => [f.id, f.label]));
@@ -32,6 +34,9 @@ export function Top3Step({
           title="Ton top 3"
           subtitle="Note d'abord au moins 3 fonctions « Indispensable » ou « Utile », puis reviens ici."
         />
+        <ErrorText>
+          {fieldErrors.top3 || "Note au moins quelques fonctions."}
+        </ErrorText>
       </div>
     );
   }
@@ -42,6 +47,7 @@ export function Top3Step({
         title="Si l'appli ne faisait que 3 choses au début…"
         subtitle="Tape pour classer (1, 2, 3). Re-tape pour retirer."
       />
+      {fieldErrors.top3 ? <ErrorText>{fieldErrors.top3}</ErrorText> : null}
 
       <div className="flex gap-2 text-sm text-muted">
         {[0, 1, 2].map((i) => (

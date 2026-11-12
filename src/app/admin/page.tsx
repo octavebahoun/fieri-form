@@ -10,6 +10,7 @@ import { listResponses } from "@/lib/responses";
 import { computeStats } from "@/lib/scoring";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function AdminPage() {
   if (!(await isAdminAuthenticated())) {

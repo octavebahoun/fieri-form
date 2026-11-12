@@ -20,6 +20,17 @@ import {
 } from "./constants";
 import type { FormAnswers, FunctionId, RoleId } from "./types";
 
+export type FormStepId =
+  | "welcome"
+  | "role"
+  | "org"
+  | "functions"
+  | "top3"
+  | "permissions"
+  | "design"
+  | "usage"
+  | "recap";
+
 function clip(value: unknown, max: number): string {
   if (typeof value !== "string") return "";
   return value.trim().slice(0, max);
@@ -136,71 +147,6 @@ export function sanitizeAnswers(raw: unknown): FormAnswers | null {
 
 export type ValidationError = { field: string; message: string };
 
-export function validateForSubmit(answers: FormAnswers): ValidationError[] {
-  const errors: ValidationError[] = [];
-
-  if (answers.website) {
-    errors.push({ field: "website", message: "Spam détecté." });
-  }
-
-  if (!answers.startedAt || Date.now() - answers.startedAt < MIN_SUBMIT_MS) {
-    errors.push({
-      field: "startedAt",
-      message: "Envoi trop rapide. Reprends tranquillement.",
-    });
-  }
-
-  if (!answers.role) {
-    errors.push({ field: "role", message: "Choisis ton rôle." });
-  }
-
-  if (!answers.frequence) {
-    errors.push({ field: "frequence", message: "Indique ta fréquence." });
-  }
-
-  const rated = Object.keys(answers.functionRatings);
-  if (rated.length < 3) {
-    errors.push({
-      field: "functionRatings",
-      message: "Note au moins quelques fonctions.",
-    });
-  }
-
-  if (answers.top3.length !== 3) {
-    errors.push({ field: "top3", message: "Choisis exactement 3 priorités." });
-  }
-
-  if (answers.minRoles.length === 0) {
-    errors.push({ field: "minRoles", message: "Choisis au moins un rôle minimum." });
-  }
-
-  if (!answers.palette) {
-    errors.push({ field: "palette", message: "Choisis une palette." });
-  }
-
-  if (!answers.ambiance) {
-    errors.push({ field: "ambiance", message: "Choisis une ambiance." });
-  }
-
-  if (!answers.modePref) {
-    errors.push({ field: "modePref", message: "Choisis un mode d'affichage." });
-  }
-
-  if (!answers.device) {
-    errors.push({ field: "device", message: "Indique ton appareil." });
-  }
-
-  if (!answers.connexion) {
-    errors.push({ field: "connexion", message: "Indique ta connexion." });
-  }
-
-  return errors;
-}
-
-export function needsDetailedPermissions(role: RoleId | ""): boolean {
-  return role !== "" && DETAILED_PERMISSION_ROLES.includes(role);
-}
-
 export function eligibleForTop3(
   ratings: FormAnswers["functionRatings"],
 ): FunctionId[] {
@@ -208,4 +154,169 @@ export function eligibleForTop3(
     const rating = ratings[id];
     return rating === "indispensable" || rating === "utile";
   });
+}
+
+export function needsDetailedPermissions(role: RoleId | ""): boolean {
+  return role !== "" && DETAILED_PERMISSION_ROLES.includes(role);
+}
+
+/** Au moins 3 fonctions notées Indispensable/Utile → Top 3 possible. */
+export function validateFunctionsStep(answers: FormAnswers): ValidationError[] {
+  const rated = Object.keys(answers.functionRatings);
+  if (rated.length === 0 || rated.length < 3) {
+    return [
+      {
+        field: "functionRatings",
+        message: "Note au moins quelques fonctions.",
+      },
+    ];
+  }
+  if (eligibleForTop3(answers.functionRatings).length < 3) {
+    return [
+      {
+        field: "functionRatings",
+        message: "Note au moins quelques fonctions.",
+      },
+    ];
+  }
+  return [];
+}
+
+export function validateRoleStep(answers: FormAnswers): ValidationError[] {
+  const errors: ValidationError[] = [];
+  if (!answers.role) {
+    errors.push({ field: "role", message: "Choisis ton rôle." });
+  }
+  if (!answers.frequence) {
+    errors.push({ field: "frequence", message: "Indique ta fréquence." });
+  }
+  return errors;
+}
+
+export function validateTop3Step(answers: FormAnswers): ValidationError[] {
+  if (eligibleForTop3(answers.functionRatings).length < 3) {
+    return [
+      {
+        field: "top3",
+        message: "Note au moins quelques fonctions.",
+      },
+    ];
+  }
+  if (answers.top3.length !== 3) {
+    return [
+      { field: "top3", message: "Choisis exactement 3 priorités." },
+    ];
+  }
+  const eligible = new Set(eligibleForTop3(answers.functionRatings));
+  if (answers.top3.some((id) => !eligible.has(id))) {
+    return [
+      {
+        field: "top3",
+        message: "Choisis exactement 3 priorités parmi celles notées utiles.",
+      },
+    ];
+  }
+  return [];
+}
+
+export function validatePermissionsStep(answers: FormAnswers): ValidationError[] {
+  if (answers.minRoles.length === 0) {
+    return [
+      {
+        field: "minRoles",
+        message: "Choisis au moins un rôle minimum.",
+      },
+    ];
+  }
+  return [];
+}
+
+export function validateDesignStep(answers: FormAnswers): ValidationError[] {
+  const errors: ValidationError[] = [];
+  if (!answers.palette) {
+    errors.push({ field: "palette", message: "Choisis une palette." });
+  }
+  if (!answers.ambiance) {
+    errors.push({ field: "ambiance", message: "Choisis une ambiance." });
+  }
+  if (!answers.modePref) {
+    errors.push({ field: "modePref", message: "Choisis un mode d'affichage." });
+  }
+  return errors;
+}
+
+export function validateUsageStep(answers: FormAnswers): ValidationError[] {
+  const errors: ValidationError[] = [];
+  if (!answers.device) {
+    errors.push({ field: "device", message: "Indique ton appareil." });
+  }
+  if (!answers.connexion) {
+    errors.push({ field: "connexion", message: "Indique ta connexion." });
+  }
+  return errors;
+}
+
+export function validateAntiSpam(answers: FormAnswers): ValidationError[] {
+  const errors: ValidationError[] = [];
+  if (answers.website) {
+    errors.push({ field: "website", message: "Spam détecté." });
+  }
+  if (!answers.startedAt || Date.now() - answers.startedAt < MIN_SUBMIT_MS) {
+    errors.push({
+      field: "startedAt",
+      message: "Envoi trop rapide. Reprends tranquillement.",
+    });
+  }
+  return errors;
+}
+
+/** Validation d'une étape avant Suivant (mêmes règles que l'envoi). */
+export function validateStep(
+  step: FormStepId,
+  answers: FormAnswers,
+): ValidationError[] {
+  switch (step) {
+    case "welcome":
+    case "org":
+      return [];
+    case "role":
+      return validateRoleStep(answers);
+    case "functions":
+      return validateFunctionsStep(answers);
+    case "top3":
+      return validateTop3Step(answers);
+    case "permissions":
+      return validatePermissionsStep(answers);
+    case "design":
+      return validateDesignStep(answers);
+    case "usage":
+      return validateUsageStep(answers);
+    case "recap":
+      return validateForSubmit(answers);
+    default:
+      return [];
+  }
+}
+
+/** Toutes les règles métier + anti-spam (envoi serveur et récap). */
+export function validateForSubmit(answers: FormAnswers): ValidationError[] {
+  return [
+    ...validateAntiSpam(answers),
+    ...validateRoleStep(answers),
+    ...validateFunctionsStep(answers),
+    ...validateTop3Step(answers),
+    ...validatePermissionsStep(answers),
+    ...validateDesignStep(answers),
+    ...validateUsageStep(answers),
+  ];
+}
+
+export function fieldErrorsMap(
+  errors: ValidationError[],
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const error of errors) {
+    if (!map[error.field]) map[error.field] = error.message;
+  }
+  return map;
 }
